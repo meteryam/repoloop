@@ -50,18 +50,15 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 		done;IFS=$'\n';
 
 		# get the repo label and sync date from the repository ID
-
 		REPOINFO=`hammer repository info --id $REPOID`;
 		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 		REPOSYNC=`echo -e "$REPOINFO" | grep ^Updated: | strip`;
 
 
 		# grep the repository set list for the search term
-
 		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
 
 		# for each result
-
 		for MYREPOSET in $SHORTLIST; do
 
 			REPOSETID=`echo $MYREPOSET | awk -F"," '{print $2}'`;
