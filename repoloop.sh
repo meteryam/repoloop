@@ -65,13 +65,15 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 
 			# set the output label to the repo set label if not null
 			REPOSETLABEL=`hammer repository-set info --id $REPOSETID --organization-id $MYORGID | grep ^Label: | strip`;
-			if [ "$REPOSETLABEL" != "" ]; then REPOLABEL=$REPOSETLABEL; fi;
+
+			#if [ "$REPOSETLABEL" != "" ]; then REPOLABEL=$REPOSETLABEL; fi;
+			if [ "$REPOSETLABEL" == "" ]; then REPOSETLABEL=$REPOLABEL; fi;
 
 
 			# print results, unless an argument is given and the results don't match the argument
 			if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-				echo $REPOLABEL","$REPOSYNC;
+				echo $REPOSETLABEL","$REPOLABEL","$REPOSYNC;
 
 				# if an argument is given and matched then break
 				if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
@@ -86,7 +88,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
                        # print results, unless an argument is given and the results don't match the argument
                         if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                                echo $REPOLABEL","$REPOSYNC;
+                                echo $REPOLABEL","$REPOLABEL,$REPOSYNC;
 
                                 # if an argument is given and matched then break
                                 if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
