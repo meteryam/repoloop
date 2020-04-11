@@ -1,6 +1,12 @@
 #!/bin/bash
 
 IFS=$'\n';
+
+# The "strip" function allows us to get the second column from a "hammer ... info" output.  Including multiple fields
+# in the awk term allows us to cleanly include timestamps from the "Updated:" line, while the last "sed" term removes
+# the extra colons that appear when we apply that awk term to lines that don't include dates.  This allows us to use
+# one filter for many cases.
+
 strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed s'/:://'g; };
 
 #
@@ -14,9 +20,6 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 #
 
 
-
-
-
 # loop through the organizations
 
 for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
@@ -26,6 +29,12 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 
 	# get a list of repositories
 	REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
+
+
+	# In the line below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
+	# enclose some information (eg "(RPMs)") within parentheses, but repository names don't.  Moreover, repository
+	# set names use parentheses in complex ways.  Eliminating them from consideration doesn't seem to produce
+	# duplicate results, but it does eliminate a lot of string-handling logic.
 
 	# get a list of repository sets
 	REPOSETLIST=`hammer --csv --no-headers repository-set list --organization-id $MYORGID | grep ',yum,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
@@ -37,14 +46,19 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 		REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
 		REPNAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
 
+		# We only want to include the value of each line up to (but not including) the platform information.
+		# While that information is included in the repository name, it isn't included in the repository
+		# set information, which could include multiple platforms.  This means that we have to strip out
+		# not only the hardware platform (eg "x86_64"), but also the OS platform (eg "7Server", "7.1Server", etc).
+
 		# loop through each word of each line until x86_64 is found
 		SEARCHTERM='';
 		IFS=$' ';for EACHWORD in $REPNAME; do
 
-			if [ "$EACHWORD" != "x86_64" ]; then
-				SEARCHTERM=`echo $SEARCHTERM $EACHWORD`;
-			else
+			if [ "$EACHWORD" == "x86_64" ] || [ "$EACHWORD" == "i386" ] || [ "$EACHWORD" == "i686" ] || [ "$EACHWORD" == "ia64" ] || [ "$EACHWORD" == "s390x" ]; then
 				break;
+			else
+				SEARCHTERM=`echo $SEARCHTERM $EACHWORD`;
 			fi;
 
 		done;IFS=$'\n';
@@ -58,7 +72,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 		# grep the repository set list for the search term
 		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
 
-		# for each result
+		# for each result; this will work only for repositories imported via manifest
 		for MYREPOSET in $SHORTLIST; do
 
 			REPOSETID=`echo $MYREPOSET | awk -F"," '{print $2}'`;
@@ -66,7 +80,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 			# set the output label to the repo set label if not null
 			REPOSETLABEL=`hammer repository-set info --id $REPOSETID --organization-id $MYORGID | grep ^Label: | strip`;
 
-			#if [ "$REPOSETLABEL" != "" ]; then REPOLABEL=$REPOSETLABEL; fi;
+			# non-Red Hat repositories don't have repo set labels
 			if [ "$REPOSETLABEL" == "" ]; then REPOSETLABEL=$REPOLABEL; fi;
 
 
@@ -88,7 +102,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
                        # print results, unless an argument is given and the results don't match the argument
                         if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                                echo $REPOLABEL","$REPOLABEL,$REPOSYNC;
+                                echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
 
                                 # if an argument is given and matched then break
                                 if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
