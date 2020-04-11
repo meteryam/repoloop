@@ -35,29 +35,17 @@ if [ "$?" != 0 ]; then
 fi;
 
 # loop through the organizations
-#ALLREPOSETS='';
 for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 
     # print the organization name
     echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
 
     # get a list of repositories
-    #REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
-
-    #REPOLIST='';
-    #for PRODUCTID in `hammer product list --organization-id $MYORGID | no_header | awk '{print $1}'`; do
-    #    TEMPREPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed "s/.*/&,$PRODUCTID/"`;
-    #    REPOLIST=`echo -e "$REPOLIST"\n"$TEMPREPOLIST"`;
-    #done;
-
     REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed "s/.*/&,$PRODUCTID/"`;
-
-    #echo -e REPOLIST: "$REPOLIST";
 
     # in Satellite versions older than 6.4, the repository-set list command requires a product
     SEARCHLIST='';
     for PRODUCTID in `hammer product list --organization-id $MYORGID | no_header | awk '{print $1}'`; do
-    #for PRODUCTID in `echo -e "$REPOLIST" | awk -F"," '{print $NF}' | sort -u`; do
 
     	# In the lines below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
     	# enclose some information (eg "(RPMs)") within parentheses, but repository names don't.  Moreover, repository
@@ -68,8 +56,7 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
         # re-ordering the fields makes grepping easier later on
         REPOSETLIST=`hammer --csv repository-set list --organization-id $MYORGID --product-id $PRODUCTID 2>/dev/null | no_header | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
 
-        #echo REPOSETLIST: $REPOSETLIST;
-
+        # we need a list of all repository sets to report on custom repos
         ALLREPOSETS=`echo -e "$ALLREPOSETS"\n"$REPOSETLIST"`;
 
     	# loop through each line of the repository list
