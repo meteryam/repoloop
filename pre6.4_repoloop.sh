@@ -85,12 +85,12 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
             # building this now will make the custom repo search faster
             SEARCHLIST=`echo -e "$SEARCHLIST""\n""$REPOID","$SEARCHTERM"`;
 
-    		# grep the repository set list for the search term
-    		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
+    	    # grep the repository set list for the search term
+    	    SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
 
-    		# get the repo label and sync date from the repository ID
-    		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
-    		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
+    	    # get the repo label and sync date from the repository ID
+    	    REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
+    	    REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 
             # make sure we only report updated times for synced repos
             if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
@@ -101,7 +101,7 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 
             SHORTLIST=`echo -e "$SHORTLIST" | sort -u`;
 
-    		# print results for custom yum repositories
+    	    # print results for custom yum repositories
             if [ "$SHORTLIST" ]; then
 
         		# for each result; this will work only for repositories imported via manifest
@@ -143,15 +143,15 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
     	REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
     	REPONAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
 
-		# grep the repository set list for the search term
-		SHORTLIST=`echo -e "$ALLREPOSETS" | grep "^$REPONAME,"`;
+	# grep the repository set list for the search term
+	SHORTLIST=`echo -e "$ALLREPOSETS" | grep "^$REPONAME,"`;
 
     	# print results for custom yum repositories, which won't show up in the repository set list
         if [ "$SHORTLIST" == "" ]; then
 
-        	# get the repo label and sync date from the repository ID
-        	REPOINFO=`hammer repository info --id $REPOID`;
-        	REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
+       	    # get the repo label and sync date from the repository ID
+            REPOINFO=`hammer repository info --id $REPOID`;
+            REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 
             # make sure we only report updated times for synced repos
             if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
