@@ -26,9 +26,9 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 
 no_header () { egrep -v "NAME|^ID|---"; };
 
-# fail immediately if hammer fails
+# fail immediately if hammer fails, or if it asks for credentials
 
-hammer organization list 1>/dev/null
+false | hammer organization list 1>/dev/null
 if [ "$?" != 0 ]; then
     echo problem running hammer commands. quitting.;
     exit;
