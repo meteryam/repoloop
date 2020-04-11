@@ -21,14 +21,9 @@ IFS=$'\n';
 strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed s'/:://'g; };
 
 
-# The "no_header" function strips off the header and vertical bars.  This is a substitute for the
-# "--no-headers" option in versions of Satellite older than 6.4.
+# fail immediately if hammer fails
 
-no_header () { egrep -v "NAME|^ID|---"; };
-
-# fail immediately if hammer fails, or if it asks for credentials
-
-false | hammer organization list 1>/dev/null
+hammer organization list 1>/dev/null
 if [ "$?" != 0 ]; then
     echo problem running hammer commands. quitting.;
     exit;
@@ -36,13 +31,13 @@ fi;
 
 # loop through the organizations
 
-for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
+for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 
 	# print the organization name
-	echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
+	echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
 
 	# get a list of repositories
-	REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
+	REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID 2>/dev/null | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
 
 
 	# In the line below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
@@ -51,7 +46,7 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 	# duplicate results, but it does eliminate a lot of string-handling logic.
 
 	# get a list of repository sets
-	REPOSETLIST=`hammer --csv repository-set list --organization-id $MYORGID 2>/dev/null | no_header | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
+	REPOSETLIST=`hammer --csv --no-headers repository-set list --organization-id $MYORGID 2>/dev/null | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
 
 
 	# loop through each line of the repository list
@@ -116,20 +111,19 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 		done;
 
 		# print results for custom yum repositories
-                if [ "$SHORTLIST" == "" ]; then
+        if [ "$SHORTLIST" == "" ]; then
 
-                       # print results, unless an argument is given and the results don't match the argument
-                        if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
+               # print results, unless an argument is given and the results don't match the argument
+                if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                                echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
+                        echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
 
-                                # if an argument is given and matched then break
-                                if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
-
-                        fi;
+                        # if an argument is given and matched then break
+                        if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
 
                 fi;
 
+        fi;
+
 	done;
 done
-

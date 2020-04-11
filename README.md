@@ -11,10 +11,13 @@ For Red Hat repositories, labels are pulled from the repository set information.
 repositories, labels are pulled from the repository information.  This maintains consistency with
 what yum expects.
 
-This script has been run without errors on these versions of Satellite:
+The repoloop.sh script has been run without errors on these versions of Satellite:
 
 6.7.0-5.beta
 6.6.1-1		throws deprecation warnings to stderr
 6.5.3-1
 6.4.4.2-1
-6.3.5.2-1	labels don't work properly because hammer repository-set command works differently
+
+The pre6.4_repoloop.sh script has been run without errors on these versions of Satellite:
+
+6.3.5.2-1
