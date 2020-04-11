@@ -80,12 +80,12 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
 		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 
-        # make sure we only report updated times for synced repos
-        if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
-            REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
-        else
-            REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
-        fi;
+		# make sure we only report updated times for synced repos
+		if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
+			REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
+		else
+			REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
+		fi;
 
 		# grep the repository set list for the search term
 		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
