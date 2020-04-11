@@ -35,167 +35,153 @@ if [ "$?" != 0 ]; then
 fi;
 
 # loop through the organizations
-
+#ALLREPOSETS='';
 for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 
-# print the organization name
-echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
+    # print the organization name
+    echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
 
-# get a list of repositories
-REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
+    # get a list of repositories
+    #REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
 
-# in Satellite versions older than 6.4, the repository-set list command requires a product
-ALLREPOSETS='';
-for PRODUCTID in `hammer product list --organization-id $MYORGID | no_header | awk '{print $1}'`; do
+    #REPOLIST='';
+    #for PRODUCTID in `hammer product list --organization-id $MYORGID | no_header | awk '{print $1}'`; do
+    #    TEMPREPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed "s/.*/&,$PRODUCTID/"`;
+    #    REPOLIST=`echo -e "$REPOLIST"\n"$TEMPREPOLIST"`;
+    #done;
 
-	# In the lines below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
-	# enclose some information (eg "(RPMs)") within parentheses, but repository names don't.  Moreover, repository
-	# set names use parentheses in complex ways.  Eliminating them from consideration doesn't seem to produce
-	# duplicate results, but it does eliminate a lot of string-handling logic.
+    REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed "s/.*/&,$PRODUCTID/"`;
 
-	# get a list of repository sets
-    # re-ordering the fields makes grepping easier later on
-    REPOSETLIST=`hammer --csv repository-set list --organization-id $MYORGID --product-id $PRODUCTID 2>/dev/null | no_header | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
+    #echo -e REPOLIST: "$REPOLIST";
 
-    ALLREPOSETS=`echo -e "$ALLREPOSETS"\n"$REPOSETLIST"`;
+    # in Satellite versions older than 6.4, the repository-set list command requires a product
+    SEARCHLIST='';
+    for PRODUCTID in `hammer product list --organization-id $MYORGID | no_header | awk '{print $1}'`; do
+    #for PRODUCTID in `echo -e "$REPOLIST" | awk -F"," '{print $NF}' | sort -u`; do
 
-	# loop through each line of the repository list
-	for REPOLINE in $REPOLIST; do
+    	# In the lines below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
+    	# enclose some information (eg "(RPMs)") within parentheses, but repository names don't.  Moreover, repository
+    	# set names use parentheses in complex ways.  Eliminating them from consideration doesn't seem to produce
+    	# duplicate results, but it does eliminate a lot of string-handling logic.
 
-		REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
-		REPONAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
+    	# get a list of repository sets
+        # re-ordering the fields makes grepping easier later on
+        REPOSETLIST=`hammer --csv repository-set list --organization-id $MYORGID --product-id $PRODUCTID 2>/dev/null | no_header | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
 
-		# We only want to include the value of each line up to (but not including) the platform information.
-		# While that information is included in the repository name, it isn't included in the repository
-		# set information, which could include multiple platforms.  This means that we have to strip out
-		# not only the hardware platform (eg "x86_64"), but also the OS platform (eg "7Server", "7.1Server", etc).
+        #echo REPOSETLIST: $REPOSETLIST;
 
-		# loop through each word of each line until x86_64 is found
-		SEARCHTERM='';
-		IFS=$' ';for EACHWORD in $REPONAME; do
+        ALLREPOSETS=`echo -e "$ALLREPOSETS"\n"$REPOSETLIST"`;
 
-			if [ "$EACHWORD" == "x86_64" ] || [ "$EACHWORD" == "i386" ] || [ "$EACHWORD" == "i686" ] || [ "$EACHWORD" == "ia64" ] || [ "$EACHWORD" == "s390x" ]; then
-				break;
-			else
-				SEARCHTERM=`echo $SEARCHTERM $EACHWORD`;
-			fi;
+    	# loop through each line of the repository list
+    	for REPOLINE in $REPOLIST; do
 
-		done;IFS=$'\n';
+    		REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
+    		REPONAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
 
-        #echo -e "$SEARCHTERM"
+    		# We only want to include the value of each line up to (but not including) the platform information.
+    		# While that information is included in the repository name, it isn't included in the repository
+    		# set information, which could include multiple platforms.  This means that we have to strip out
+    		# not only the hardware platform (eg "x86_64"), but also the OS platform (eg "7Server", "7.1Server", etc).
 
-		# get the repo label and sync date from the repository ID
-		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
-		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
+    		# loop through each word of each line until x86_64 is found
+    		SEARCHTERM='';
+    		IFS=$' ';for EACHWORD in $REPONAME; do
 
-        # make sure we only report updated times for synced repos
-        if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
-            REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
-        else
-            REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
-        fi;
-
-		# grep the repository set list for the search term
-		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
-        #echo searchterm: $SEARCHTERM
-        #echo -e "$SHORTLIST" | head -1
-
-		# print results for custom yum repositories
-        if [ "$SHORTLIST" ]; then
-
-    		# for each result; this will work only for repositories imported via manifest
-    		for MYREPOSET in $SHORTLIST; do
-
-    			REPOSETID=`echo $MYREPOSET | awk -F"," '{print $2}'`;
-
-    			# set the output label to the repo set label if not null
-    			REPOSETLABEL=`hammer repository-set info --organization-id $MYORGID --product-id $PRODUCTID --id $REPOSETID 2>/dev/null | grep ^Label: | strip`;
-
-    			# non-Red Hat repositories don't have repo set labels
-    			if [ "$REPOSETLABEL" == "" ]; then REPOSETLABEL=$REPOLABEL; fi;
-
-
-    			# print results, unless an argument is given and the results don't match the argument
-    			if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
-
-    				echo $REPOSETLABEL","$REPOLABEL","$REPOSYNC;
-
-    				# if an argument is given and matched then break
-    				if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
-
+    			if [ "$EACHWORD" == "x86_64" ] || [ "$EACHWORD" == "i386" ] || [ "$EACHWORD" == "i686" ] || [ "$EACHWORD" == "ia64" ] || [ "$EACHWORD" == "s390x" ]; then
+    				break;
+    			else
+    				SEARCHTERM=`echo $SEARCHTERM $EACHWORD`;
     			fi;
 
-    		done;
+    		done;IFS=$'\n';
 
-        #else
+            # building this now will make the custom repo search faster
+            SEARCHLIST=`echo -e "$SEARCHLIST""\n""$REPOID","$SEARCHTERM"`;
+
+    		# grep the repository set list for the search term
+    		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
+
+    		# get the repo label and sync date from the repository ID
+    		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
+    		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
+
+            # make sure we only report updated times for synced repos
+            if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
+                REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
+            else
+                REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
+            fi;
+
+            SHORTLIST=`echo -e "$SHORTLIST" | sort -u`;
+
+    		# print results for custom yum repositories
+            if [ "$SHORTLIST" ]; then
+
+        		# for each result; this will work only for repositories imported via manifest
+        		for MYREPOSET in $SHORTLIST; do
+
+        			REPOSETID=`echo $MYREPOSET | awk -F"," '{print $2}'`;
+
+        			# set the output label to the repo set label if not null
+        			REPOSETLABEL=`hammer repository-set info --organization-id $MYORGID --product-id $PRODUCTID --id $REPOSETID 2>/dev/null | grep ^Label: | strip`;
+
+        			# non-Red Hat repositories don't have repo set labels
+        			if [ "$REPOSETLABEL" == "" ]; then REPOSETLABEL=$REPOLABEL; fi;
 
 
+        			# print results, unless an argument is given and the results don't match the argument
+        			if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-        fi;
+        				echo $REPOSETLABEL","$REPOLABEL","$REPOSYNC;
 
-	done;
+        				# if an argument is given and matched then break
+        				if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
 
-done;
+        			fi;
 
-# print values for custom repositories, which won't show up in the repository set list
+        		done;
 
-for REPOLINE in $REPOLIST; do
+            fi;
 
-	# loop through each line of the repository list
-	for REPOLINE in $REPOLIST; do
+    	done;
 
-		REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
-		REPONAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
+    done;
 
-		# We only want to include the value of each line up to (but not including) the platform information.
-		# While that information is included in the repository name, it isn't included in the repository
-		# set information, which could include multiple platforms.  This means that we have to strip out
-		# not only the hardware platform (eg "x86_64"), but also the OS platform (eg "7Server", "7.1Server", etc).
+    SEARCHLIST=`echo -e "$SEARCHLIST" | sort -u`;
 
-		# loop through each word of each line until x86_64 is found
-		SEARCHTERM='';
-		IFS=$' ';for EACHWORD in $REPONAME; do
+    # print values for custom repositories, which won't show up in the repository set list
+    # loop through each line of the repository list
+    for REPOLINE in $SEARCHLIST; do
 
-			if [ "$EACHWORD" == "x86_64" ] || [ "$EACHWORD" == "i386" ] || [ "$EACHWORD" == "i686" ] || [ "$EACHWORD" == "ia64" ] || [ "$EACHWORD" == "s390x" ]; then
-				break;
-			else
-				SEARCHTERM=`echo $SEARCHTERM $EACHWORD`;
-			fi;
-
-		done;IFS=$'\n';
-
-		# get the repo label and sync date from the repository ID
-		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
-		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
-
-        # make sure we only report updated times for synced repos
-        if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
-            REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
-        else
-            REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
-        fi;
+    	REPOID=`echo $REPOLINE | awk -F"," '{print $1}'`;
+    	REPONAME=`echo $REPOLINE | awk -F"," '{print $2}'`;
 
 		# grep the repository set list for the search term
-		SHORTLIST=`echo -e "$ALLREPOSETS" | grep "^$SEARCHTERM,"`;
+		SHORTLIST=`echo -e "$ALLREPOSETS" | grep "^$REPONAME,"`;
 
-		# print results for custom yum repositories, which won't show up in the repository set list
+    	# print results for custom yum repositories, which won't show up in the repository set list
         if [ "$SHORTLIST" == "" ]; then
 
-               # print results, unless an argument is given and the results don't match the argument
-                if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
+        	# get the repo label and sync date from the repository ID
+        	REPOINFO=`hammer repository info --id $REPOID`;
+        	REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 
-                        echo $REPOLABEL","$REPOSYNC;
+            # make sure we only report updated times for synced repos
+            if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
+                REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
+            else
+                REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
+            fi;
 
-                        # if an argument is given and matched then break
-                        if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
+            # print results, unless an argument is given and the results don't match the argument
+            echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
 
-                fi;
+            # if an argument is given and matched then break
+            if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
 
         fi;
 
-	done;
-
-done;
+    done;
 
 done
 
