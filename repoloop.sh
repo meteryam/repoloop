@@ -9,6 +9,12 @@ IFS=$'\n';
 
 strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed s'/:://'g; };
 
+
+# The "no_header" function strips off the header and vertical bars.  This is a substitute for the
+# "--no-headers" option in versions of Satellite older than 6.4.
+
+no_header () { egrep -v "NAME|^ID|---"; };
+
 #
 # This script combines the last sync dates and times for each repository with the
 # repository label known to yum, for each organization.  If an argument is supplied, it will only print
@@ -19,9 +25,9 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 # what yum expects.
 #
 
-# fail immediately if hammer fails, and/or if the --organization-id option finally deprecates
+# fail immediately if hammer fails
 
-hammer -q organization list --organization-id 1;
+hammer organization list 1>/dev/null
 if [ "$?" != 0 ]; then
     echo problem running hammer commands. quitting.;
     exit;
@@ -29,13 +35,13 @@ fi;
 
 # loop through the organizations
 
-for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
+for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 
 	# print the organization name
-	echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
+	echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
 
 	# get a list of repositories
-	REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID 2>/dev/null | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
+	REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
 
 
 	# In the line below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
@@ -44,7 +50,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 	# duplicate results, but it does eliminate a lot of string-handling logic.
 
 	# get a list of repository sets
-	REPOSETLIST=`hammer --csv --no-headers repository-set list --organization-id $MYORGID 2>/dev/null | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
+	REPOSETLIST=`hammer --csv repository-set list --organization-id $MYORGID 2>/dev/null | no_header | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
 
 
 	# loop through each line of the repository list
@@ -73,8 +79,13 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 		# get the repo label and sync date from the repository ID
 		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
 		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
-		REPOSYNC=`echo -e "$REPOINFO" | grep ^Updated: | strip`;
 
+        # make sure we only report updated times for synced repos
+        if [ "`echo -e "$REPOINFO" | grep Success`" ]; then
+            REPOSYNC=`echo -e "$REPOINFO" | grep "Last Sync Date:" | strip`;
+        else
+            REPOSYNC=`echo -e "$REPOINFO" | grep Status: | strip`;
+        fi;
 
 		# grep the repository set list for the search term
 		SHORTLIST=`echo -e "$REPOSETLIST" | grep "^$SEARCHTERM,"`;
@@ -120,3 +131,4 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 
 	done;
 done
+
