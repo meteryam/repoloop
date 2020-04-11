@@ -1,5 +1,16 @@
 #!/bin/bash
 
+#
+# This script combines the last sync dates and times for each repository with the
+# repository label known to yum, for each organization.  If an argument is supplied, it will only print
+# the information for the supplied label.
+#
+# For Red Hat repositories, labels are pulled from the repository set information.  For non-Red Hat
+# repositories, labels are pulled from the repository information.  This maintains consistency with
+# what yum expects.
+#
+
+
 IFS=$'\n';
 
 # The "strip" function allows us to get the second column from a "hammer ... info" output.  Including multiple fields
@@ -14,16 +25,6 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 # "--no-headers" option in versions of Satellite older than 6.4.
 
 no_header () { egrep -v "NAME|^ID|---"; };
-
-#
-# This script combines the last sync dates and times for each repository with the
-# repository label known to yum, for each organization.  If an argument is supplied, it will only print
-# the information for the supplied label.
-#
-# For Red Hat repositories, labels are pulled from the repository set information.  For non-Red Hat
-# repositories, labels are pulled from the repository information.  This maintains consistency with
-# what yum expects.
-#
 
 # fail immediately if hammer fails
 
