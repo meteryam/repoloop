@@ -19,6 +19,13 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 # what yum expects.
 #
 
+# fail immediately if hammer fails, and/or if the --organization-id option finally deprecates
+
+hammer -q organization list --organization-id 1;
+if [ "$?" != 0 ]; then
+    echo problem running hammer commands. quitting.;
+    exit;
+fi;
 
 # loop through the organizations
 
@@ -28,7 +35,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 	echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
 
 	# get a list of repositories
-	REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
+	REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID 2>/dev/null | grep ',yum,' | grep ',http' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
 
 
 	# In the line below, we have to strip out the parentheses for naming convention compatibility.  Repository sets
@@ -37,7 +44,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 	# duplicate results, but it does eliminate a lot of string-handling logic.
 
 	# get a list of repository sets
-	REPOSETLIST=`hammer --csv --no-headers repository-set list --organization-id $MYORGID | grep ',yum,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
+	REPOSETLIST=`hammer --csv --no-headers repository-set list --organization-id $MYORGID 2>/dev/null | egrep ',yum,|,kickstart,' | tr -d '(' | tr -d ')' | awk -F"," '{print $3","$1}'`;
 
 
 	# loop through each line of the repository list
@@ -64,7 +71,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 		done;IFS=$'\n';
 
 		# get the repo label and sync date from the repository ID
-		REPOINFO=`hammer repository info --id $REPOID`;
+		REPOINFO=`hammer repository info --id $REPOID 2>/dev/null`;
 		REPOLABEL=`echo -e "$REPOINFO" | grep ^Label: | strip`;
 		REPOSYNC=`echo -e "$REPOINFO" | grep ^Updated: | strip`;
 
@@ -78,7 +85,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
 			REPOSETID=`echo $MYREPOSET | awk -F"," '{print $2}'`;
 
 			# set the output label to the repo set label if not null
-			REPOSETLABEL=`hammer repository-set info --id $REPOSETID --organization-id $MYORGID | grep ^Label: | strip`;
+			REPOSETLABEL=`hammer repository-set info --id $REPOSETID --organization-id $MYORGID 2>/dev/null | grep ^Label: | strip`;
 
 			# non-Red Hat repositories don't have repo set labels
 			if [ "$REPOSETLABEL" == "" ]; then REPOSETLABEL=$REPOLABEL; fi;
