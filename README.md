@@ -21,3 +21,4 @@ The repoloop.sh script has been run without errors on these versions of Satellit
 The pre6.4_repoloop.sh script has been run without errors on these versions of Satellite:
 
 - 6.3.5.2-1
+- 6.2.16.1-1.0
