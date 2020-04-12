@@ -59,7 +59,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
         # set information, which could include multiple platforms.  This means that we have to strip out
         # not only the hardware platform (eg "x86_64"), but also the OS platform (eg "7Server", "7.1Server", etc).
 
-        # loop through each word of each line until x86_64 is found
+        # loop through each word of each line until a platform keyword is found
         SEARCHTERM='';
         IFS=$' ';for EACHWORD in $REPNAME; do
 
