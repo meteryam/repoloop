@@ -10,9 +10,6 @@ the information for the supplied label.  Here are a couple of examples:
 # repoloop.sh rhel-7-server-dotnet-rpms
 ```
 
-The pre6.4_repoloop.sh script is run the same way, but is designed to work on Satellite 6.2 and 6.3
-systems.
-
 For Red Hat repositories, labels are pulled from the repository set information.  For non-Red Hat
 repositories, labels are pulled from the repository information.  This maintains consistency with
 what yum expects.
@@ -27,6 +24,9 @@ the information for the supplied label.
 For Red Hat repositories, labels are pulled from the repository set information.  For non-Red Hat
 repositories, labels are pulled from the repository information.  This maintains consistency with
 what yum expects.
+
+The pre6.4_repoloop.sh script is run the same way and accomplishes the same goals, but is designed
+to work on Satellite 6.2 and 6.3 systems.
 
 The repoloop.sh script has been run without errors on these versions of Satellite:
 
