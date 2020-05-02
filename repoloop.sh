@@ -22,7 +22,7 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 
 # exit immediately if hammer fails, or if it requests a password
 
-hammer organization list 1>/dev/null
+hammer organization list 1>/dev/null 2> >(grep -v ^Warning)
 if [ "$?" != 0 ]; then
     echo problem running hammer commands. quitting.;
     exit;
@@ -34,11 +34,11 @@ echo ORGANIZATION,REPOSETLABEL,REPOLABEL,LASTSYNC
 
 # loop through the organizations
 
-for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
+for MYORGID in `hammer --no-headers organization list 2> >(grep -v ^Warning) | awk '{print $1}'`; do
 
     # print the organization name
     #echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
-    MYORGNAME=`hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
+    MYORGNAME=`hammer --no-headers organization info --id $MYORGID 2> >(grep -v ^Warning) | grep ^Name: | strip`;
 
     # get a list of repositories
     REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID 2>/dev/null | egrep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
