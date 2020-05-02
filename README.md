@@ -29,7 +29,7 @@ what yum expects.
 The repoloop.sh script has been run without errors on these versions of Satellite:
 
 - 6.7.0-7
-- 6.6.1-1		throws deprecation warnings to stderr
+- 6.6.1-1
 - 6.5.3-1
 - 6.4.4.2-1
 
