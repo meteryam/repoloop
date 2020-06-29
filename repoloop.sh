@@ -24,18 +24,23 @@ strip () { awk -F":" '{print $2":"$3":"$4}' | sed 's/^[ \t]*//;s/[ \t]*$//' | se
 
 # exit immediately if hammer fails, or if it requests a password
 
-hammer organization list 1>/dev/null
+hammer organization list 1>/dev/null 2> >(grep -v ^Warning)
 if [ "$?" != 0 ]; then
     echo problem running hammer commands. quitting.;
     exit;
 fi;
 
+# print header line
+
+echo ORGANIZATION,REPOSETLABEL,REPOLABEL,LASTSYNC
+
 # loop through the organizations
 
-for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
+for MYORGID in `hammer --no-headers organization list 2> >(grep -v ^Warning) | awk '{print $1}'`; do
 
     # print the organization name
-    echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
+    #echo \# organization `hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
+    MYORGNAME=`hammer --no-headers organization info --id $MYORGID 2> >(grep -v ^Warning) | grep ^Name: | strip`;
 
     # get a list of repositories
     REPOLIST=`hammer --csv --no-headers repository list --organization-id $MYORGID 2>/dev/null | egrep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//'`;
@@ -102,7 +107,8 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
             # print results, unless an argument is given and the results don't match the argument
             if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                echo $REPOSETLABEL","$REPOLABEL","$REPOSYNC;
+                echo "$MYORGNAME","$REPOSETLABEL","$REPOLABEL","$REPOSYNC";
+
 
                 # if an argument is given and matched then break
                 if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
@@ -117,7 +123,7 @@ for MYORGID in `hammer --no-headers organization list | awk '{print $1}'`; do
                # print results, unless an argument is given and the results don't match the argument
                 if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                        echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
+                        echo "$MYORGNAME","$REPOLABEL","$REPOLABEL","$REPOSYNC";
 
                         # if an argument is given and matched then break
                         if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;

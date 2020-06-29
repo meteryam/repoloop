@@ -36,11 +36,16 @@ if [ "$?" != 0 ]; then
     exit;
 fi;
 
+# print header
+
+echo ORGANIZATION,REPOSETLABEL,REPOLABEL,LASTSYNC
+
 # loop through the organizations
 for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
 
     # print the organization name
-    echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
+    #echo \# organization `hammer organization info --id $MYORGID | no_header | grep ^Name: | strip`;
+    MYORGNAME=`hammer --no-headers organization info --id $MYORGID | grep ^Name: | strip`;
 
     # get a list of repositories
     REPOLIST=`hammer --csv repository list --organization-id $MYORGID 2>/dev/null | no_header | egrep ',yum,' | awk -F"," '{print $1","$2}' | sed 's/^[ \t]*//;s/[ \t]*$//' | sed "s/.*/&,$PRODUCTID/"`;
@@ -125,7 +130,7 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
                     # print results, unless an argument is given and the results don't match the argument
                     if [ "$1" == "" ] || [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then
 
-                        echo $REPOSETLABEL","$REPOLABEL","$REPOSYNC;
+                        echo $MYORGNAME","$REPOSETLABEL","$REPOLABEL","$REPOSYNC;
 
                         # if an argument is given and matched then break
                         if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
@@ -167,7 +172,7 @@ for MYORGID in `hammer organization list | no_header | awk '{print $1}'`; do
             fi;
 
             # print results, unless an argument is given and the results don't match the argument
-            echo $REPOLABEL","$REPOLABEL","$REPOSYNC;
+            echo $MYORGNAME","$REPOLABEL","$REPOLABEL","$REPOSYNC;
 
             # if an argument is given and matched then break
             if [ "$1" != "" ] && [ "`echo \"$REPOLABEL\" | grep -i $1`" ]; then break; fi;
