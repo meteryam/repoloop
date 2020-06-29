@@ -9,6 +9,8 @@
 # repositories, labels are pulled from the repository information.  This maintains consistency with
 # what yum expects.
 #
+# Disclaimer:  This script is provided "as is", without support by either Red Hat or by its author.
+#
 
 IFS=$'\n';
 
